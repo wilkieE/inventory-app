@@ -9,8 +9,10 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    // Fetch all items with their current status
     const items = await prisma.item.findMany({
+      where: {
+        deletedAt: null,
+      },
       select: {
         id: true,
         name: true,
@@ -19,9 +21,8 @@ export default defineEventHandler(async (event) => {
       },
     });
 
-    // Return the list of items
     return { data: items, statusCode: 200 };
   } catch (error) {
-    return { error: "Error fetching items status", statusCode: 500 };
+    return { error: "Error fetching items", statusCode: 500 };
   }
 });

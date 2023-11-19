@@ -5,28 +5,46 @@ export default defineEventHandler(async (event) => {
 
   // Handle GET request - Fetch all items
   if (method === "GET") {
-    const items = await prisma.item.findMany();
+    const items = await prisma.item.findMany({
+      where: {
+        deletedAt: null,
+      },
+    });
     return items;
   }
 
   // Handle POST request - Add a new item
   if (method === "POST") {
-    // Read and validate request body
     const newItem = await readBody(event);
     if (!newItem.name || !newItem.description || !newItem.status) {
       return { error: "Missing required fields", statusCode: 400 };
     }
 
-    // Check if the item already exists
-    const existingItem = await prisma.item.findUnique({
-      where: { name: newItem.name },
+    // Check if the item exists and is soft deleted
+    const existingItem = await prisma.item.findFirst({
+      where: {
+        name: newItem.name,
+        deletedAt: { not: null },
+      },
     });
 
+    // Reactivate and update the soft-deleted item
     if (existingItem) {
-      return { error: "Item already exists with this name", statusCode: 409 };
+      try {
+        const reactivatedItem = await prisma.item.update({
+          where: { id: existingItem.id },
+          data: {
+            ...newItem,
+            deletedAt: null,
+          },
+        });
+        return { data: reactivatedItem, statusCode: 200 };
+      } catch (error) {
+        return { error: "Error reactivating item", statusCode: 500 };
+      }
     }
 
-    // Create the new item
+    // or create the new item if it does not exist
     try {
       const createdItem = await prisma.item.create({
         data: {
@@ -37,7 +55,7 @@ export default defineEventHandler(async (event) => {
       });
       return { data: createdItem, statusCode: 201 };
     } catch (error) {
-      return { error: "Error creating item", statusCode: 500 };
+      return { error: `Error creating item ${error}`, statusCode: 500 };
     }
   }
 

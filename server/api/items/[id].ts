@@ -1,5 +1,4 @@
-import prisma from "../../../utils/prismaClient";
-import { readBody } from "h3";
+import prisma, { softDeleteItem } from "../../../utils/prismaClient";
 
 export default defineEventHandler(async (event) => {
   const { method } = event.node.req;
@@ -11,11 +10,14 @@ export default defineEventHandler(async (event) => {
 
   // Handle GET request - Fetch a single item by ID
   if (method === "GET") {
-    const item = await prisma.item.findUnique({
-      where: { id: itemId },
+    const item = await prisma.item.findFirst({
+      where: {
+        id: itemId,
+        deletedAt: null,
+      },
     });
     if (!item) {
-      return { error: "Item not found", statusCode: 404 };
+      return { error: "Item not found or has been deleted", statusCode: 404 };
     }
     return item;
   }
@@ -34,15 +36,36 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Handle DELETE request - Delete an item
+  // Handle DELETE request - Soft delete an item
   if (method === "DELETE") {
     try {
-      await prisma.item.delete({
+      // Check if the item exists and is not soft deleted
+      const item = await prisma.item.findUnique({
         where: { id: itemId },
       });
-      return { message: "Item deleted successfully", statusCode: 200 };
+      if (!item) {
+        return { error: "Item not found", statusCode: 404 };
+      }
+      if (item.deletedAt) {
+        return {
+          error: "Item has already been deleted",
+          statusCode: 400,
+        };
+      }
+
+      // Check if the item isnt checked out
+      if (item.status !== "available") {
+        return {
+          error: "Item cannot be deleted while it is checked out",
+          statusCode: 400,
+        };
+      }
+
+      await softDeleteItem({ id: itemId });
+
+      return { message: "Item soft deleted successfully", statusCode: 200 };
     } catch (error) {
-      return { error: "Error deleting item", statusCode: 500 };
+      return { error: `Error soft deleting item`, statusCode: 500 };
     }
   }
 

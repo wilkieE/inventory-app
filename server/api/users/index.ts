@@ -1,21 +1,25 @@
-import prisma from '../../../utils/prismaClient';
+import prisma from "../../../utils/prismaClient";
 
 export default defineEventHandler(async (event) => {
   const { method } = event.node.req;
 
   // Handle GET request - Fetch all users
-  if (method === 'GET') {
-    const users = await prisma.user.findMany();
+  if (method === "GET") {
+    const users = await prisma.user.findMany({
+      where: {
+        deletedAt: null,
+      },
+    });
     return users;
   }
 
   // Handle POST request - Create a new user
-  if (method === 'POST') {
+  if (method === "POST") {
     const newUser = await readBody(event);
 
     // Validate the input
     if (!newUser.name || !newUser.email || !newUser.department) {
-      return { error: 'Missing required fields', statusCode: 400 };
+      return { error: "Missing required fields", statusCode: 400 };
     }
 
     // Check if the user already exists
@@ -24,7 +28,7 @@ export default defineEventHandler(async (event) => {
     });
 
     if (existingUser) {
-      return { error: 'User already exists with this email', statusCode: 409 };
+      return { error: "User already exists with this email", statusCode: 409 };
     }
 
     // Create the new user
@@ -38,10 +42,10 @@ export default defineEventHandler(async (event) => {
       });
       return { data: createdUser, statusCode: 201 };
     } catch (error) {
-      return { error: 'Error creating user', statusCode: 500 };
+      return { error: "Error creating user", statusCode: 500 };
     }
   }
 
   // If method is not GET or POST, return an error
-  return { error: 'Method not allowed', statusCode: 405 };
-})
+  return { error: "Method not allowed", statusCode: 405 };
+});
