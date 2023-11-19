@@ -26,14 +26,16 @@ export default defineEventHandler(async (event) => {
   // Handle PUT request - Update a user's information
   if (method === "PUT") {
     const userData = await readBody(event);
+    const { name, email, department } = userData;
+
     try {
       const updatedUser = await prisma.user.update({
         where: { id: userId },
-        data: userData,
+        data: { name, email, department },
       });
       return { data: updatedUser, statusCode: 200 };
     } catch (error) {
-      return { error: "Error updating user", statusCode: 500 };
+      return { error: `Error updating user`, statusCode: 500 };
     }
   }
 

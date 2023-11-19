@@ -21,6 +21,9 @@
             Department</th>
           <th
             class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            Checked Out Items</th>
+          <th
+            class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
             Actions</th>
         </tr>
       </thead>
@@ -29,6 +32,12 @@
           <td class="px-4 py-2 border-b border-gray-200">{{ user.name }}</td>
           <td class="px-4 py-2 border-b border-gray-200">{{ user.email }}</td>
           <td class="px-4 py-2 border-b border-gray-200">{{ user.department }}</td>
+          <td class="px-4 py-2 border-b border-gray-200">
+            <span v-for="(item, index) in user.checkedOutItems" :key="item.id">
+              <NuxtLink :to="`/items/${item.id}`">{{ item.name }}</NuxtLink>
+              <span v-if="index < user.checkedOutItems.length - 1">, </span>
+            </span>
+          </td>
           <td class="px-4 py-2 border-b border-gray-200">
             <button class="text-blue-600 hover:text-blue-800" @click="editUser(user)">Edit</button>
             <button class="text-red-600 hover:text-red-800 ml-2" @click="confirmDeleteUser(user.id)">Delete</button>
@@ -61,26 +70,51 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue';
 import { useFetch } from '#app';
 
-const { data: users, pending, refresh, error } = await useFetch('/api/users');
+interface NewUser {
+  name: string;
+  email: string;
+  department: string;
+}
+
+interface CheckedOutItem {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  deletedAt: Date | null;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  department: string;
+  deletedAt: Date | null;
+  checkedOutItems: CheckedOutItem[];
+}
+
+
+const { data: users, pending, refresh, error } = await useFetch<User[]>('/api/users');
 
 const showModal = ref(false);
-const editingUser = ref(null);
+const editingUser = ref<User | null>(null);
 const modalData = ref({ name: '', email: '', department: '' });
-
 const showConfirmationDialog = ref(false);
-let userToDelete = ref(null);
+const userToDelete = ref<string | null>(null);
 
-const confirmDeleteUser = (userId) => {
+const confirmDeleteUser = (userId: string) => {
   showConfirmationDialog.value = true;
   userToDelete.value = userId;
 };
 
 const confirmDeletion = async () => {
-  await deleteUser(userToDelete.value);
+  if (userToDelete.value !== null) {
+    await deleteUser(userToDelete.value);
+  }
   showConfirmationDialog.value = false;
 };
 
@@ -95,7 +129,7 @@ const showAddUserModal = () => {
   showModal.value = true;
 };
 
-const editUser = (user) => {
+const editUser = (user: User) => {
   editingUser.value = user;
   modalData.value = { ...user };
   showModal.value = true;
@@ -103,18 +137,24 @@ const editUser = (user) => {
 
 const handleModalSubmit = async () => {
   if (editingUser.value) {
-    await updateUser(editingUser.value.id, modalData.value);
+    const userToUpdate: User = {
+      ...modalData.value,
+      id: editingUser.value.id,
+      deletedAt: editingUser.value.deletedAt,
+      checkedOutItems: editingUser.value.checkedOutItems
+    };
+    await updateUser(userToUpdate.id, userToUpdate);
   } else {
     await addNewUser(modalData.value);
   }
   closeModal();
-};
+}
 
 const closeModal = () => {
   showModal.value = false;
 };
 
-const addNewUser = async (newUser) => {
+const addNewUser = async (newUser: NewUser) => {
   try {
     const response = await fetch('api/users', {
       method: 'POST',
@@ -134,7 +174,7 @@ const addNewUser = async (newUser) => {
   }
 };
 
-const updateUser = async (userId, updatedUser) => {
+const updateUser = async (userId: string, updatedUser: User) => {
   try {
     const response = await fetch(`api/users/${userId}`, {
       method: 'PUT',
@@ -154,7 +194,7 @@ const updateUser = async (userId, updatedUser) => {
   }
 };
 
-const deleteUser = async (userId) => {
+const deleteUser = async (userId: string) => {
   try {
     const response = await fetch(`api/users/${userId}`, {
       method: 'DELETE'
