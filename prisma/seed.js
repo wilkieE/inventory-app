@@ -61,13 +61,21 @@ async function seed() {
   }
   for (const item of items) {
     await prisma.item.create({
-      data: item,
+      data: { ...item, status: "available" },
     });
   }
   for (const log of usageLogData) {
     await prisma.usageLog.create({
       data: log,
     });
+
+    // If the log entry has no end time, set the corresponding item's status to 'in use'
+    if (!log.endTime) {
+      await prisma.item.update({
+        where: { id: log.itemId },
+        data: { status: "in use" },
+      });
+    }
   }
 }
 
