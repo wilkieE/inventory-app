@@ -10,56 +10,55 @@ export default defineEventHandler(async (event) => {
 
   // Read and validate the request
   const returnData = await readBody(event);
-  const { userId, itemId } = returnData;
+  const { itemId, returnNotes } = returnData;
 
-  if (!userId || !itemId) {
-    return { error: "Missing userId or itemId", statusCode: 400 };
+  if (!itemId) {
+    return { error: "Missing itemId", statusCode: 400 };
   }
-  const numericUserId = Number(userId);
   const numericItemId = Number(itemId);
-  if (isNaN(numericUserId) || isNaN(numericItemId)) {
-    return { error: "Invalid userId or itemId", statusCode: 400 };
+  if (isNaN(numericItemId)) {
+    return { error: "Invalid itemId", statusCode: 400 };
   }
 
   try {
-    // Check if the user or item is soft deleted
-    const user = await prisma.user.findUnique({
-      where: { id: numericUserId },
+    // Find the latest open usage log for the item
+    const usageLog = await prisma.usageLog.findFirst({
+      where: {
+        itemId: numericItemId,
+        endTime: null,
+      },
+      orderBy: {
+        startTime: "desc",
+      },
     });
-    const item = await prisma.item.findUnique({
-      where: { id: numericItemId },
+
+    if (!usageLog) {
+      return {
+        error: "No open usage log found for this item",
+        statusCode: 404,
+      };
+    }
+
+    const userId = usageLog.userId;
+
+    // Check if the user is soft deleted
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
     });
 
     if (!user || user.deletedAt) {
       return { error: "User not found or has been deleted", statusCode: 404 };
     }
 
-    if (!item || item.deletedAt) {
-      return { error: "Item not found or has been deleted", statusCode: 404 };
-    }
-
     // Perform the updates as a transaction
     await prisma.$transaction(async (prisma) => {
-      // Find the latest usage log for the item by this user that hasn't been closed yet
-      const usageLog = await prisma.usageLog.findFirst({
-        where: {
-          userId: numericUserId,
-          itemId: numericItemId,
-          endTime: null, // log is open if endTime is null
-        },
-        orderBy: {
-          startTime: "desc", // Get the most recent log
-        },
-      });
-
-      if (!usageLog) {
-        throw new Error("No open usage log found for this user and item");
-      }
-
-      // Update the usage log to set the end time to now essentially closing the log
+      // close the log and add return notes
       await prisma.usageLog.update({
         where: { id: usageLog.id },
-        data: { endTime: new Date() },
+        data: {
+          endTime: new Date(),
+          returnNotes: returnNotes || null,
+        },
       });
 
       // also update the item's status to available
