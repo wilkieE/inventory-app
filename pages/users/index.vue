@@ -29,7 +29,9 @@
       </thead>
       <tbody>
         <tr v-for="user in users" :key="user.id">
-          <td class="px-4 py-2 border-b border-gray-200">{{ user.name }}</td>
+          <td class="px-4 py-2 border-b border-gray-200">
+            <NuxtLink :to="`/users/${user.id}`" class="text-blue-600 hover:text-blue-800">{{ user.name }}</NuxtLink>
+          </td>
           <td class="px-4 py-2 border-b border-gray-200">{{ user.email }}</td>
           <td class="px-4 py-2 border-b border-gray-200">{{ user.department }}</td>
           <td class="px-4 py-2 border-b border-gray-200">

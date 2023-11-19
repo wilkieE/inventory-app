@@ -35,7 +35,11 @@
           <td class="px-4 py-2 border-b border-gray-200">{{ item.description }}</td>
           <td class="px-4 py-2 border-b border-gray-200">{{ item.status }}</td>
           <td class="px-4 py-2 border-b border-gray-200">
-            <span v-if="item.currentUser">{{ item.currentUser.name }}</span>
+            <span v-if="item.currentUser">
+              <NuxtLink :to="`/users/${item.currentUser.id}`" class="text-blue-600 hover:text-blue-800">
+                {{ item.currentUser.name }}
+              </NuxtLink>
+            </span>
             <span v-else>None</span>
           </td>
           <td class="px-4 py-2 border-b border-gray-200">
@@ -83,7 +87,7 @@ interface Item {
   name: string;
   description: string;
   status: string;
-  currentUser?: { name: string };
+  currentUser?: { name: string, id: string };
 }
 
 const { data: items, pending, refresh, error } = await useFetch<Item[]>('/api/items');

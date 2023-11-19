@@ -18,9 +18,6 @@ export default defineEventHandler(async (event) => {
       },
       include: {
         usageLogs: {
-          where: {
-            endTime: null,
-          },
           include: {
             item: true,
           },
