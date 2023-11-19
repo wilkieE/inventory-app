@@ -16,6 +16,7 @@ model User {
   email      String     @unique
   department String
   usageLogs  UsageLog[]
+  deletedAt  DateTime?
 }
 
 model Item {
@@ -24,6 +25,7 @@ model Item {
   description String
   status      String
   usageLogs   UsageLog[]
+  deletedAt   DateTime?
 }
 
 model UsageLog {
@@ -34,4 +36,5 @@ model UsageLog {
   userId    Int
   item      Item      @relation(fields: [itemId], references: [id])
   itemId    Int
+  deletedAt DateTime?
 }
