@@ -6,7 +6,10 @@
                 <label for="item" class="block text-gray-700 text-sm font-bold mb-2">Select Item:</label>
                 <select id="item" v-model="selectedItem"
                     class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    <option v-for="item in items" :key="item.id" :value="item.id">{{ item.name }}</option>
+                    <option v-for="item in items" :key="item.id" :value="item.id" :disabled="item.status !== 'available'"
+                        :class="{ 'text-gray-500': item.status !== 'available' }">
+                        {{ item.name }} ({{ item.status }})
+                    </option>
                 </select>
             </div>
             <div class="mb-4">
@@ -27,32 +30,48 @@
     </div>
 </template>
   
-<script setup>
-import { ref, onMounted } from 'vue';
+<script setup lang="ts">
+import { ref } from 'vue';
 import { useFetch } from '#app';
 
-const selectedItem = ref('');
-const selectedUser = ref('');
-const { data: items } = await useFetch('/api/items');
-const { data: users } = await useFetch('/api/users');
+interface Item {
+    id: number;
+    name: string;
+    status: string;
+}
 
-const checkoutItem = async () => {
+interface User {
+    id: number;
+    name: string;
+}
+
+const selectedItem = ref<number | string>('');
+const selectedUser = ref<number | string>('');
+const { data: items, refresh: refreshItems } = await useFetch<Item[]>('/api/items');
+const { data: users, refresh: refreshUsers } = await useFetch<User[]>('/api/users');
+
+const checkoutItem = async (): Promise<void> => {
     if (!selectedItem.value || !selectedUser.value) {
         alert('Please select both an item and a user.');
         return;
     }
-    //TODO implement checkout logic
+
     try {
-        await fetch('/api/items', {
+        const response = await fetch('/api/items/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ itemId: selectedItem.value, userId: selectedUser.value })
         });
 
-        alert('Item checked out successfully!');
-        // Reset selections or navigate away
-        selectedItem.value = '';
-        selectedUser.value = '';
+        if (response.ok) {
+            alert('Item checked out successfully!');
+            selectedItem.value = '';
+            selectedUser.value = '';
+            await refreshItems();
+            await refreshUsers();
+        } else {
+            throw new Error('Failed to checkout item');
+        }
     } catch (error) {
         console.error('Error checking out item:', error);
         alert('Failed to checkout item.');

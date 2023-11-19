@@ -3,14 +3,50 @@ import prisma from "../../../utils/prismaClient";
 export default defineEventHandler(async (event) => {
   const { method } = event.node.req;
 
-  // Handle GET request - Fetch all items
+  // Handle GET request - Fetch all items along with current user
   if (method === "GET") {
     const items = await prisma.item.findMany({
       where: {
         deletedAt: null,
       },
+      include: {
+        usageLogs: {
+          where: {
+            endTime: null,
+            deletedAt: null,
+          },
+          include: {
+            user: true,
+          },
+          orderBy: {
+            startTime: "desc",
+          },
+          take: 1,
+        },
+      },
     });
-    return items;
+
+    const simplifiedItems = items.map((item) => {
+      // Extract user details from the most recent/current usage log
+      const currentUser = item.usageLogs[0]?.user
+        ? {
+            id: item.usageLogs[0].user.id,
+            name: item.usageLogs[0].user.name,
+            email: item.usageLogs[0].user.email,
+            department: item.usageLogs[0].user.department,
+          }
+        : null;
+
+      return {
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        status: item.status,
+        currentUser,
+      };
+    });
+
+    return simplifiedItems;
   }
 
   // Handle POST request - Add a new item

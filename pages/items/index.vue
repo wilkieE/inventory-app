@@ -23,6 +23,9 @@
             Status</th>
           <th
             class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            Current User</th>
+          <th
+            class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
             Actions</th>
         </tr>
       </thead>
@@ -31,6 +34,10 @@
           <td class="px-4 py-2 border-b border-gray-200">{{ item.name }}</td>
           <td class="px-4 py-2 border-b border-gray-200">{{ item.description }}</td>
           <td class="px-4 py-2 border-b border-gray-200">{{ item.status }}</td>
+          <td class="px-4 py-2 border-b border-gray-200">
+            <span v-if="item.currentUser">{{ item.currentUser.name }}</span>
+            <span v-else>None</span>
+          </td>
           <td class="px-4 py-2 border-b border-gray-200">
             <button class="text-blue-600 hover:text-blue-800" @click="editItem(item)">Edit</button>
             <button class="text-red-600 hover:text-red-800 ml-2" @click="confirmDeleteItem(item.id)"
@@ -67,24 +74,36 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue';
+<script setup lang="ts">
+import { ref, computed, type Ref } from 'vue';
 import { useFetch } from '#app';
 
-const { data: items, pending, refresh, error } = await useFetch('/api/items');
-const selectedStatus = ref('');
-const statuses = ref(['available', 'in use']);
+interface Item {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  currentUser?: { name: string };
+}
+
+const { data: items, pending, refresh, error } = await useFetch<Item[]>('/api/items');
+const selectedStatus: Ref<string> = ref('');
+const statuses: Ref<string[]> = ref(['available', 'in use']);
 
 const filteredItems = computed(() => {
+  if (!items.value) {
+    return [];
+  }
   return selectedStatus.value ? items.value.filter(item => item.status === selectedStatus.value) : items.value;
 });
 
 // Modal and confirmation dialog state
-const showItemModal = ref(false);
-const editingItem = ref(null);
-const modalItemData = ref({ name: '', description: '', status: 'available' });
-const showItemConfirmationDialog = ref(false);
-let itemToDelete = ref(null);
+const showItemModal: Ref<boolean> = ref(false);
+const editingItem: Ref<Item | null> = ref(null);
+const modalItemData: Ref<Partial<Item>> = ref({ name: '', description: '', status: 'available' });
+const showItemConfirmationDialog: Ref<boolean> = ref(false);
+let itemToDelete: Ref<string | null> = ref(null);
+
 
 const addNewItem = () => {
   editingItem.value = null;
@@ -92,7 +111,7 @@ const addNewItem = () => {
   showItemModal.value = true;
 };
 
-const editItem = (item) => {
+const editItem = (item: Item) => {
   editingItem.value = item;
   modalItemData.value = { ...item };
   showItemModal.value = true;
@@ -111,12 +130,15 @@ const closeItemModal = () => {
   showItemModal.value = false;
 };
 
-const confirmDeleteItem = (itemId) => {
+const confirmDeleteItem = (itemId: string) => {
   showItemConfirmationDialog.value = true;
   itemToDelete.value = itemId;
 };
 
 const confirmItemDeletion = async () => {
+  if (!itemToDelete.value) {
+    return;
+  }
   await deleteItem(itemToDelete.value);
   showItemConfirmationDialog.value = false;
 };
@@ -126,7 +148,7 @@ const cancelItemDeletion = () => {
 };
 
 // CRUD operations for items
-const createItem = async (newItem) => {
+const createItem = async (newItem: Partial<Item>) => {
   try {
     const response = await fetch('/api/items', {
       method: 'POST',
@@ -146,14 +168,19 @@ const createItem = async (newItem) => {
   }
 };
 
-const updateItem = async (itemId, updatedItem) => {
+const updateItem = async (itemId: string, updatedItem: Partial<Item>) => {
   try {
+    const payload = {
+      name: updatedItem.name,
+      description: updatedItem.description
+    };
+
     const response = await fetch(`/api/items/${itemId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(updatedItem),
+      body: JSON.stringify(payload),
     });
 
     if (response.ok) {
@@ -166,7 +193,7 @@ const updateItem = async (itemId, updatedItem) => {
   }
 };
 
-const deleteItem = async (itemId) => {
+const deleteItem = async (itemId: string) => {
   try {
     const response = await fetch(`/api/items/${itemId}`, {
       method: 'DELETE',
@@ -174,7 +201,6 @@ const deleteItem = async (itemId) => {
 
     if (response.ok) {
       refresh();
-      console.error('Error deleting item:', response.statusText);
     }
   } catch (error) {
     console.error('Error:', error);
