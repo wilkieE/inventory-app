@@ -9,18 +9,28 @@ export default defineEventHandler(async (event) => {
     return { error: "Invalid user ID", statusCode: 400 };
   }
 
-  // Handle GET request - Fetch a single user by ID
+  // Handle GET request - Fetch a single user by ID along with their items
   if (method === "GET") {
-    const user = await prisma.user.findFirst({
+    const userWithItems = await prisma.user.findUnique({
       where: {
         id: userId,
         deletedAt: null,
       },
+      include: {
+        usageLogs: {
+          where: {
+            endTime: null,
+          },
+          include: {
+            item: true,
+          },
+        },
+      },
     });
-    if (!user) {
+    if (!userWithItems) {
       return { error: "User not found or has been deleted", statusCode: 404 };
     }
-    return user;
+    return { data: userWithItems, statusCode: 200 };
   }
 
   // Handle PUT request - Update a user's information

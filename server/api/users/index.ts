@@ -9,8 +9,42 @@ export default defineEventHandler(async (event) => {
       where: {
         deletedAt: null,
       },
+      include: {
+        usageLogs: {
+          where: {
+            endTime: null,
+            deletedAt: null,
+          },
+          include: {
+            item: true,
+          },
+        },
+      },
     });
-    return users;
+    const usersWithCheckedOutItems = users.map((user) => {
+      const checkedOutItems = user.usageLogs
+        .filter((log) => log.deletedAt === null)
+        .map((log) => {
+          return {
+            id: log.item.id,
+            name: log.item.name,
+            description: log.item.description,
+            status: log.item.status,
+            deletedAt: log.item.deletedAt,
+          };
+        });
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        department: user.department,
+        deletedAt: user.deletedAt,
+        checkedOutItems,
+      };
+    });
+
+    return usersWithCheckedOutItems;
   }
 
   // Handle POST request - Create a new user

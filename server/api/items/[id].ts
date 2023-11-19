@@ -8,18 +8,34 @@ export default defineEventHandler(async (event) => {
     return { error: "Invalid item ID", statusCode: 400 };
   }
 
-  // Handle GET request - Fetch a single item by ID
+  // Handle GET request - Fetch a single item by ID along with its history
   if (method === "GET") {
-    const item = await prisma.item.findFirst({
-      where: {
-        id: itemId,
-        deletedAt: null,
-      },
-    });
-    if (!item) {
-      return { error: "Item not found or has been deleted", statusCode: 404 };
+    try {
+      const itemWithHistory = await prisma.item.findUnique({
+        where: {
+          id: itemId,
+        },
+        include: {
+          usageLogs: {
+            include: {
+              user: true,
+            },
+            orderBy: {
+              startTime: "desc",
+            },
+          },
+        },
+      });
+      if (!itemWithHistory) {
+        return { error: "Item not found or has been deleted", statusCode: 404 };
+      }
+      return { data: itemWithHistory, statusCode: 200 };
+    } catch (error) {
+      return {
+        error: "Error retrieving item and its history",
+        statusCode: 500,
+      };
     }
-    return item;
   }
 
   // Handle PUT request - Update an item's information
