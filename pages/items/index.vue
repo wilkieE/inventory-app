@@ -33,11 +33,37 @@
           <td class="px-4 py-2 border-b border-gray-200">{{ item.status }}</td>
           <td class="px-4 py-2 border-b border-gray-200">
             <button class="text-blue-600 hover:text-blue-800" @click="editItem(item)">Edit</button>
-            <button class="text-red-600 hover:text-red-800 ml-2" @click="deleteItem(item.id)">Delete</button>
+            <button class="text-red-600 hover:text-red-800 ml-2" @click="confirmDeleteItem(item.id)"
+              :disabled="item.status !== 'available'">Delete</button>
           </td>
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <!-- Add/Edit Item Modal -->
+  <div v-if="showItemModal" class="modal">
+    <div class="modal-content">
+      <h2 class="text-xl font-bold mb-4">{{ editingItem ? 'Edit Item' : 'Add New Item' }}</h2>
+      <label>Name: <input v-model="modalItemData.name" type="text"></label>
+      <label>Description: <input v-model="modalItemData.description" type="text"></label>
+      <div v-if="editingItem">
+        <label>Status: <span>{{ modalItemData.status }}</span></label>
+      </div>
+      <button @click="handleItemModalSubmit">{{ editingItem ? 'Update' : 'Add' }}</button>
+      <button @click="closeItemModal">Cancel</button>
+    </div>
+  </div>
+
+
+  <!-- Confirmation Dialog for Items -->
+  <div v-if="showItemConfirmationDialog" class="confirmation-dialog">
+    <div class="confirmation-content">
+      <h2>Confirm Deletion</h2>
+      <p>Are you sure you want to delete this item?</p>
+      <button @click="confirmItemDeletion">Yes, Delete</button>
+      <button @click="cancelItemDeletion">Cancel</button>
+    </div>
   </div>
 </template>
 
@@ -53,14 +79,106 @@ const filteredItems = computed(() => {
   return selectedStatus.value ? items.value.filter(item => item.status === selectedStatus.value) : items.value;
 });
 
-//TODO add crud logic
+// Modal and confirmation dialog state
+const showItemModal = ref(false);
+const editingItem = ref(null);
+const modalItemData = ref({ name: '', description: '', status: 'available' });
+const showItemConfirmationDialog = ref(false);
+let itemToDelete = ref(null);
+
 const addNewItem = () => {
+  editingItem.value = null;
+  modalItemData.value = { name: '', description: '', status: 'available' };
+  showItemModal.value = true;
 };
 
 const editItem = (item) => {
+  editingItem.value = item;
+  modalItemData.value = { ...item };
+  showItemModal.value = true;
+};
+
+const handleItemModalSubmit = async () => {
+  if (editingItem.value) {
+    await updateItem(editingItem.value.id, modalItemData.value);
+  } else {
+    await createItem(modalItemData.value);
+  }
+  closeItemModal();
+};
+
+const closeItemModal = () => {
+  showItemModal.value = false;
+};
+
+const confirmDeleteItem = (itemId) => {
+  showItemConfirmationDialog.value = true;
+  itemToDelete.value = itemId;
+};
+
+const confirmItemDeletion = async () => {
+  await deleteItem(itemToDelete.value);
+  showItemConfirmationDialog.value = false;
+};
+
+const cancelItemDeletion = () => {
+  showItemConfirmationDialog.value = false;
+};
+
+// CRUD operations for items
+const createItem = async (newItem) => {
+  try {
+    const response = await fetch('/api/items', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newItem),
+    });
+
+    if (response.ok) {
+      refresh();
+    } else {
+      console.error('Error creating item:', response.statusText);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
+};
+
+const updateItem = async (itemId, updatedItem) => {
+  try {
+    const response = await fetch(`/api/items/${itemId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedItem),
+    });
+
+    if (response.ok) {
+      refresh();
+    } else {
+      console.error('Error updating item:', response.statusText);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
 };
 
 const deleteItem = async (itemId) => {
-  refresh();
+  try {
+    const response = await fetch(`/api/items/${itemId}`, {
+      method: 'DELETE',
+    });
+
+    if (response.ok) {
+      refresh();
+      console.error('Error deleting item:', response.statusText);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
 };
 </script>
+
