@@ -1,4 +1,7 @@
 <template>
+  <Head>
+    <Title>Awesome Inventory App</Title>
+  </Head>
   <UCard>
     <template #header>
       <h1>Current inventory status:</h1>
