@@ -1,75 +1,64 @@
-# Nuxt 3 Minimal Starter
+# Inventory App - Nuxt 3 and Prisma
 
-Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+This is an inventory application built with Nuxt 3 and Prisma, utilizing a PostgreSQL database. Follow these steps to set up and run the app on your local machine.
 
-## Setup
+## Prerequisites
 
-Make sure to install the dependencies:
+- Node.js installed
+- PostgreSQL installed
 
-```bash
-# npm
-npm install
+## Installation
 
-# pnpm
-pnpm install
+1. Clone the repository to your local machine.
 
-# yarn
-yarn install
+2. Navigate to the cloned directory and install dependencies:
+   `npm install `
 
-# bun
-bun install
-```
+3. Add a `.env` file with your PostgreSQL connection string, it should look something like `DATABASE_URL="postgresql://USER:PASSWORD@127.0.0.1:5432/inventory_db"`
+   you will need to create the database and user specified here if they dont exist
 
-## Development Server
+## Database Setup
 
-Start the development server on `http://localhost:3000`:
+### Create PostgreSQL User and Database
 
-```bash
-# npm
-npm run dev
+1. Connect to PostgreSQL:
+   `psql -U postgres`
 
-# pnpm
-pnpm run dev
+2. Create a new user:
+   `CREATE USER USER WITH PASSWORD 'PASSWORD';`
 
-# yarn
-yarn dev
+3. Create a new database:
+   `CREATE DATABASE inventory_db;
+`
 
-# bun
-bun run dev
-```
+4. Grant the user the necessary permissions:
 
-## Production
+- Connect to the database:
+  `\c inventory_db`
+  or
+  `psql -U postgres -d inventory_db`
 
-Build the application for production:
+- Grant all privileges to the user:
+  ```
+  GRANT ALL PRIVILEGES ON SCHEMA public TO USER;
+  ```
 
-```bash
-# npm
-npm run build
+5. Exit the PostgreSQL CLI
 
-# pnpm
-pnpm run build
+## Running Migrations and Seeder
 
-# yarn
-yarn build
+1. Generate the Prisma client:
+   `npx prisma migrate dev
+`
 
-# bun
-bun run build
-```
+2. Reset the database and run the seeder:
+   `npx prisma migrate reset
+`
 
-Locally preview production build:
+## Starting the Application
 
-```bash
-# npm
-npm run preview
+Run the development server:
+`npm run dev
+`
 
-# pnpm
-pnpm run preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+And you're done. Now, you can view the awesome inventory app in your browser!
