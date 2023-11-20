@@ -1,37 +1,45 @@
 <template>
     <div class="container mx-auto p-4">
         <h1 class="text-2xl font-bold mb-4">Checkout Item</h1>
-        <form @submit.prevent="checkoutItem">
-            <div class="mb-4">
-                <label for="item" class="block text-gray-700 text-sm font-bold mb-2">Select Item:</label>
-                <select id="item" v-model="selectedItem"
-                    class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    <option v-for="item in items" :key="item.id" :value="item.id" :disabled="item.status !== 'available'"
-                        :class="{ 'text-gray-500': item.status !== 'available' }">
-                        {{ item.name }} ({{ item.status }})
-                    </option>
-                </select>
-            </div>
-            <div class="mb-4">
-                <label for="user" class="block text-gray-700 text-sm font-bold mb-2">Select User:</label>
-                <select id="user" v-model="selectedUser"
-                    class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    <option v-for="user in users" :key="user.id" :value="user.id">{{ user.name }}</option>
-                </select>
-            </div>
+
+        <UForm :validate="validate" :state="formState" class="space-y-4" @submit="checkoutItem">
+            <UFormGroup label="Select Item to checkout:" name="selectedItem">
+                <USelectMenu v-model="formState.selectedItem" :options="itemOptions" class="w-full"
+                    placeholder="Select an Item" searchable searchable-placeholder="Search an item..."
+                    value-attribute="value" option-attribute="label">
+                    <template #label>
+                        <span class="min-h-[22px]">
+                            {{ currentItem?.name || 'Select an Item' }}
+                        </span>
+                    </template>
+                </USelectMenu>
+            </UFormGroup>
+
+            <UFormGroup label="Select User to checkout:" name="selectedUser">
+                <USelectMenu v-model="formState.selectedUser" :options="userOptions" class="w-full"
+                    placeholder="Select a User" searchable searchable-placeholder="Search a user..." value-attribute="value"
+                    option-attribute="label">
+                    <template #label>
+                        <span class="min-h-[22px]">
+                            {{ currentUser?.name || 'Select a User' }}
+                        </span>
+                    </template>
+                </USelectMenu>
+            </UFormGroup>
+
             <div class="flex items-center justify-between">
-                <button
-                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                    type="submit">
+                <UButton type="submit"
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
                     Checkout
-                </button>
+                </UButton>
             </div>
-        </form>
+        </UForm>
     </div>
 </template>
-  
+
 <script setup lang="ts">
-import { ref } from 'vue';
+import { reactive } from 'vue';
+import type { FormError } from '#ui/types';
 import { useFetch } from '#app';
 
 interface Item {
@@ -45,13 +53,42 @@ interface User {
     name: string;
 }
 
-const selectedItem = ref<number | string>('');
-const selectedUser = ref<number | string>('');
+const formState = reactive({
+    selectedItem: undefined as number | undefined,
+    selectedUser: undefined as number | undefined,
+});
+
 const { data: items, refresh: refreshItems } = await useFetch<Item[]>('/api/items');
 const { data: users, refresh: refreshUsers } = await useFetch<User[]>('/api/users');
 
+const currentItem = computed(() => {
+    return items.value?.find(item => item.id === formState.selectedItem);
+});
+
+const currentUser = computed(() => {
+    return users.value?.find(user => user.id === formState.selectedUser);
+});
+
+const itemOptions = computed(() => items.value?.map(item => ({
+    label: `${item.name} (${item.status})`,
+    value: item.id,
+    disabled: item.status !== 'available'
+})) ?? []);
+
+const userOptions = computed(() => users.value?.map(user => ({
+    label: user.name,
+    value: user.id
+})) ?? []);
+
+const validate = (state: any): FormError[] => {
+    const errors = [];
+    if (!state.selectedItem) errors.push({ path: 'selectedItem', message: 'Please select an item.' });
+    if (!state.selectedUser) errors.push({ path: 'selectedUser', message: 'Please select a user.' });
+    return errors;
+};
+
 const checkoutItem = async (): Promise<void> => {
-    if (!selectedItem.value || !selectedUser.value) {
+    if (!formState.selectedItem || !formState.selectedUser) {
         alert('Please select both an item and a user.');
         return;
     }
@@ -60,13 +97,13 @@ const checkoutItem = async (): Promise<void> => {
         const response = await fetch('/api/items/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ itemId: selectedItem.value, userId: selectedUser.value })
+            body: JSON.stringify({ itemId: formState.selectedItem, userId: formState.selectedUser })
         });
 
         if (response.ok) {
             alert('Item checked out successfully!');
-            selectedItem.value = '';
-            selectedUser.value = '';
+            formState.selectedItem = undefined;
+            formState.selectedUser = undefined;
             await refreshItems();
             await refreshUsers();
         } else {
