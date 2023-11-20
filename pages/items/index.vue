@@ -1,80 +1,99 @@
 <template>
-  <div class="container mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-4">Item Management</h1>
-    <div class="mb-4 flex justify-between items-center">
-      <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" @click="addNewItem">Add New Item</button>
-      <select v-model="selectedStatus"
-        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block p-2.5">
-        <option value="">All Statuses</option>
-        <option v-for="status in statuses" :key="status" :value="status">{{ status }}</option>
-      </select>
-    </div>
-    <table class="min-w-full bg-white">
-      <thead>
-        <tr>
-          <th
-            class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-            Name</th>
-          <th
-            class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-            Description</th>
-          <th
-            class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-            Status</th>
-          <th
-            class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-            Current User</th>
-          <th
-            class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-            Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="item in filteredItems" :key="item.id">
-          <td class="px-4 py-2 border-b border-gray-200">{{ item.name }}</td>
-          <td class="px-4 py-2 border-b border-gray-200">{{ item.description }}</td>
-          <td class="px-4 py-2 border-b border-gray-200">{{ item.status }}</td>
-          <td class="px-4 py-2 border-b border-gray-200">
-            <span v-if="item.currentUser">
-              <NuxtLink :to="`/users/${item.currentUser.id}`" class="text-blue-600 hover:text-blue-800">
-                {{ item.currentUser.name }}
-              </NuxtLink>
+  <div
+    class="container mx-auto mt-4 p-4 overflow-hidden rounded-lg divide-y divide-gray-200 dark:divide-gray-800 ring-1 ring-gray-200 dark:ring-gray-800 shadow bg-white dark:bg-gray-900">
+    <div class="flex justify-between items-center mb-6 mt-2">
+      <div class="flex gap-4">
+        <h1 class="text-2xl font-bold">Item Management</h1>
+        <USelectMenu v-model="selectedStatus" placeholder="Select a Status" :options="statusOptions">
+          <template #label>
+            <span class="min-h-[22px]">
+              {{ selectedStatus || 'All Statuses' }}
             </span>
-            <span v-else>None</span>
-          </td>
-          <td class="px-4 py-2 border-b border-gray-200">
-            <button class="text-blue-600 hover:text-blue-800" @click="editItem(item)">Edit</button>
-            <button class="text-red-600 hover:text-red-800 ml-2" @click="confirmDeleteItem(item.id)"
-              :disabled="item.status !== 'available'">Delete</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Add/Edit Item Modal -->
-  <div v-if="showItemModal" class="modal">
-    <div class="modal-content">
-      <h2 class="text-xl font-bold mb-4">{{ editingItem ? 'Edit Item' : 'Add New Item' }}</h2>
-      <label>Name: <input v-model="modalItemData.name" type="text"></label>
-      <label>Description: <input v-model="modalItemData.description" type="text"></label>
-      <div v-if="editingItem">
-        <label>Status: <span>{{ modalItemData.status }}</span></label>
+          </template>
+        </USelectMenu>
       </div>
-      <button @click="handleItemModalSubmit">{{ editingItem ? 'Update' : 'Add' }}</button>
-      <button @click="closeItemModal">Cancel</button>
+      <UButton color="blue" @click="addNewItem">Add New Item</UButton>
     </div>
-  </div>
 
 
-  <!-- Confirmation Dialog for Items -->
-  <div v-if="showItemConfirmationDialog" class="confirmation-dialog">
-    <div class="confirmation-content">
-      <h2>Confirm Deletion</h2>
-      <p>Are you sure you want to delete this item?</p>
-      <button @click="confirmItemDeletion">Yes, Delete</button>
-      <button @click="cancelItemDeletion">Cancel</button>
-    </div>
+
+    <UTable :rows="filteredItems" :columns="columns">
+      <!-- Custom Name Slot -->
+      <template #name-data="{ row }">
+        <NuxtLink :to="`/items/${row.id}`" class="text-blue-600 hover:text-blue-800">{{ row.name }}</NuxtLink>
+      </template>
+
+      <!-- Custom Description Slot -->
+      <template #description-data="{ row }">
+        <span>{{ row.description }}</span>
+      </template>
+
+      <!-- Custom Status Slot -->
+      <template #status-data="{ row }">
+        <span>{{ row.status }}</span>
+      </template>
+
+      <!-- Custom Current User Slot -->
+      <template #currentUser-data="{ row }">
+        <div>
+          <span v-if="row.currentUser">
+            <NuxtLink :to="`/users/${row.currentUser.id}`" class="text-blue-600 hover:text-blue-800">
+              {{ row.currentUser.name }}
+            </NuxtLink>
+          </span>
+          <span v-else>None</span>
+        </div>
+      </template>
+
+      <!-- Custom Action Buttons Slot -->
+      <template #actions-data="{ row }">
+        <UButton color="blue" @click="editItem(row)">Edit</UButton>
+        <UButton color="red" class="ml-2" @click="confirmDeleteItem(row.id)" :disabled="row.status !== 'available'">Delete
+        </UButton>
+      </template>
+    </UTable>
+
+
+    <!-- Add/Edit Item Modal -->
+    <UModal v-model="showItemModal">
+      <UCard :ui="{ ring: '', divide: 'divide-y divide-gray-100 dark:divide-gray-800' }">
+        <h2 class="text-lg font-semibold mb-4">{{ editingItem ? 'Edit Item' : 'Add New Item' }}</h2>
+
+        <div class="mb-3">
+          <input v-model="modalItemData.name" type="text" placeholder="Name"
+            class="w-full px-2 py-1 border border-gray-700 focus:border-gray-900 rounded focus:outline-none bg-gray-100 dark:bg-gray-800">
+        </div>
+
+        <div class="mb-3">
+          <input v-model="modalItemData.description" type="text" placeholder="Description"
+            class="w-full px-2 py-1 border border-gray-700 focus:border-gray-900 rounded focus:outline-none bg-gray-100 dark:bg-gray-800">
+        </div>
+
+        <div v-if="editingItem" class="mb-4">
+          <span>Status: {{ modalItemData.status }}</span>
+        </div>
+
+        <div class="flex justify-end space-x-2">
+          <UButton @click="closeItemModal" variant="outline">Cancel</UButton>
+          <UButton color="blue" @click="handleItemModalSubmit">
+            {{ editingItem ? 'Update' : 'Add' }}
+          </UButton>
+        </div>
+      </UCard>
+    </UModal>
+
+
+    <!-- Confirmation Dialog -->
+    <UModal v-model="showItemConfirmationDialog">
+      <UCard :ui="{ ring: '', divide: 'divide-y divide-gray-100 dark:divide-gray-800' }">
+        <h2 class="text-lg font-semibold mb-4">Confirm Deletion</h2>
+        <p>Are you sure you want to delete this item?</p>
+        <div class="flex justify-end space-x-2">
+          <UButton variant="outline" @click="cancelItemDeletion">Cancel</UButton>
+          <UButton color="red" @click="confirmItemDeletion">Yes, Delete</UButton>
+        </div>
+      </UCard>
+    </UModal>
   </div>
 </template>
 
@@ -91,15 +110,22 @@ interface Item {
 }
 
 const { data: items, pending, refresh, error } = await useFetch<Item[]>('/api/items');
-const selectedStatus: Ref<string> = ref('');
-const statuses: Ref<string[]> = ref(['available', 'in use']);
-
+const selectedStatus: Ref<string> = ref('all items');
+const statusOptions = ref(['available', 'in use', "all items"]);
 const filteredItems = computed(() => {
   if (!items.value) {
     return [];
   }
-  return selectedStatus.value ? items.value.filter(item => item.status === selectedStatus.value) : items.value;
+  return selectedStatus.value == "all items" ? items.value : items.value.filter(item => item.status === selectedStatus.value);
 });
+
+const columns = [
+  { key: 'name', label: 'Name', sortable: true },
+  { key: 'description', label: 'Description' },
+  { key: 'status', label: 'Status' },
+  { key: 'currentUser', label: 'Current User' },
+  { key: 'actions', label: 'Actions' }
+];
 
 // Modal and confirmation dialog state
 const showItemModal: Ref<boolean> = ref(false);

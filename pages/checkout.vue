@@ -1,39 +1,51 @@
 <template>
     <div class="container mx-auto p-4">
-        <h1 class="text-2xl font-bold mb-4">Checkout Item</h1>
 
-        <UForm :validate="validate" :state="formState" class="space-y-4" @submit="checkoutItem">
-            <UFormGroup label="Select Item to checkout:" name="selectedItem">
-                <USelectMenu v-model="formState.selectedItem" :options="itemOptions" class="w-full"
-                    placeholder="Select an Item" searchable searchable-placeholder="Search an item..."
-                    value-attribute="value" option-attribute="label">
-                    <template #label>
-                        <span class="min-h-[22px]">
-                            {{ currentItem?.name || 'Select an Item' }}
-                        </span>
-                    </template>
-                </USelectMenu>
-            </UFormGroup>
+        <UCard>
 
-            <UFormGroup label="Select User to checkout:" name="selectedUser">
-                <USelectMenu v-model="formState.selectedUser" :options="userOptions" class="w-full"
-                    placeholder="Select a User" searchable searchable-placeholder="Search a user..." value-attribute="value"
-                    option-attribute="label">
-                    <template #label>
-                        <span class="min-h-[22px]">
-                            {{ currentUser?.name || 'Select a User' }}
-                        </span>
-                    </template>
-                </USelectMenu>
-            </UFormGroup>
 
-            <div class="flex items-center justify-between">
-                <UButton type="submit"
-                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                    Checkout
-                </UButton>
-            </div>
-        </UForm>
+            <template #header>
+                <h1 class="text-2xl font-bold">Checkout Item</h1>
+            </template>
+
+            <UForm :validate="validate" :state="formState" class="space-y-8 pb-16 flex flex-col" @submit="checkoutItem">
+                <div class="flex-row">
+                    <UFormGroup label="Select Item to checkout:" name="selectedItem">
+                        <USelectMenu v-model="formState.selectedItem" :options="itemOptions" class="w-full"
+                            placeholder="Select an Item" searchable searchable-placeholder="Search an item..."
+                            value-attribute="value" option-attribute="label">
+                            <template #label>
+                                <span class="min-h-[22px]">
+                                    {{ currentItem?.name || 'Select an Item' }}
+                                </span>
+                            </template>
+                        </USelectMenu>
+                    </UFormGroup>
+
+                    <UFormGroup label="Select User to checkout:" name="selectedUser">
+                        <USelectMenu v-model="formState.selectedUser" :options="userOptions" class="w-full"
+                            placeholder="Select a User" searchable searchable-placeholder="Search a user..."
+                            value-attribute="value" option-attribute="label">
+                            <template #label>
+                                <span class="min-h-[22px]">
+                                    {{ currentUser?.name || 'Select a User' }}
+                                </span>
+                            </template>
+                        </USelectMenu>
+                    </UFormGroup>
+
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <UButton type="submit"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Checkout
+                    </UButton>
+                </div>
+            </UForm>
+
+            <template #footer></template>
+        </UCard>
     </div>
 </template>
 

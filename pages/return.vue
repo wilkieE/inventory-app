@@ -1,32 +1,47 @@
 <template>
     <div class="container mx-auto p-4">
-        <h1 class="text-2xl font-bold mb-4">Return Item</h1>
-        <div v-if="pending" class="text-center">Loading...</div>
-        <div v-else>
-            <form @submit.prevent="returnItem">
-                <div class="mb-4">
-                    <label for="item" class="block text-gray-700 text-sm font-bold mb-2">Select Item to Return:</label>
-                    <select id="item" v-model="selectedItem"
-                        class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                        <option v-for="item in filteredItems" :key="item.id" :value="item.id">{{ item.name }}</option>
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label for="notes" class="block text-gray-700 text-sm font-bold mb-2">Return Notes (optional):</label>
-                    <textarea id="notes" v-model="returnNotes"
-                        class="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        placeholder="Enter any return notes here..."></textarea>
-                </div>
-                <button type="submit"
-                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Return
-                    Item</button>
-            </form>
-        </div>
+        <UCard>
+            <template #header>
+                <h1 class="text-2xl font-bold">Return Item</h1>
+            </template>
+
+            <div v-if="pending" class="text-center">Loading...</div>
+            <div v-else>
+                <UForm :state="formState" class="space-y-4" @submit="returnItem">
+                    <UFormGroup label="Select Item to Return:" name="selectedItem">
+                        <USelectMenu v-model="formState.selectedItem" :options="itemOptions" class="w-full"
+                            placeholder="Select an Item" searchable searchable-placeholder="Search an item..."
+                            value-attribute="value" option-attribute="label">
+                            <template #label>
+                                <span class="min-h-[22px]">
+                                    {{ currentItem?.name || 'Select an Item' }}
+                                </span>
+                            </template>
+                        </USelectMenu>
+                    </UFormGroup>
+
+                    <UFormGroup label="Return Notes (optional):" name="returnNotes">
+                        <UTextarea v-model="formState.returnNotes" placeholder="Enter any return notes here..."
+                            class="w-full">
+                        </UTextarea>
+                    </UFormGroup>
+
+                    <div class="flex items-center justify-between">
+                        <UButton type="submit"
+                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                            Return Item
+                        </UButton>
+                    </div>
+                </UForm>
+            </div>
+
+            <template #footer></template>
+        </UCard>
     </div>
 </template>
-  
+
 <script setup lang="ts">
-import { ref, computed, type ComputedRef } from 'vue';
+import { reactive, computed } from 'vue';
 import { useFetch } from '#app';
 
 interface Item {
@@ -35,17 +50,24 @@ interface Item {
     status: string;
 }
 
-const selectedItem = ref<number | string>('');
-const returnNotes = ref<string>('');
+const formState = reactive({
+    selectedItem: undefined as number | undefined,
+    returnNotes: '',
+});
+
 const { data: items, pending, refresh } = await useFetch<Item[]>('/api/items');
 
-const filteredItems: ComputedRef<Item[]> = computed(() => {
-    return items.value?.filter(item => item.status === 'in use') || [];
+const itemOptions = computed(() => items.value?.filter(item => item.status === 'in use').map(item => ({
+    label: item.name,
+    value: item.id
+})) ?? []);
 
+const currentItem = computed(() => {
+    return items.value?.find(item => item.id === formState.selectedItem);
 });
 
 const returnItem = async (): Promise<void> => {
-    if (!selectedItem.value) {
+    if (!formState.selectedItem) {
         alert('Please select an item to return.');
         return;
     }
@@ -54,13 +76,13 @@ const returnItem = async (): Promise<void> => {
         const response = await fetch('/api/items/return', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ itemId: selectedItem.value, returnNotes: returnNotes.value })
+            body: JSON.stringify({ itemId: formState.selectedItem, returnNotes: formState.returnNotes })
         });
 
         if (response.ok) {
             alert('Item returned successfully!');
-            selectedItem.value = '';
-            returnNotes.value = '';
+            formState.selectedItem = undefined;
+            formState.returnNotes = '';
             await refresh();
         } else {
             throw new Error('Failed to return item');
@@ -71,4 +93,3 @@ const returnItem = async (): Promise<void> => {
     }
 };
 </script>
-  

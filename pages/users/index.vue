@@ -1,75 +1,76 @@
 <template>
-  <div class="container mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-4">User Management</h1>
-    <div class="mb-4">
-      <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" @click="showAddUserModal">Add New
-        User</button>
+  <div
+    class="container mx-auto mt-4 p-4 overflow-hidden rounded-lg divide-y divide-gray-200 dark:divide-gray-800 ring-1 ring-gray-200 dark:ring-gray-800 shadow bg-white dark:bg-gray-900">
+    <div class="flex justify-between items-center mb-6 mt-2">
+      <h1 class="text-2xl font-bold">User Management</h1>
+      <UButton color="blue" @click="showAddUserModal">Add New User</UButton>
     </div>
 
-    <!-- User List -->
-    <table class="min-w-full bg-white">
-      <thead>
-        <tr>
-          <th
-            class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-            Name</th>
-          <th
-            class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-            Email</th>
-          <th
-            class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-            Department</th>
-          <th
-            class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-            Checked Out Items</th>
-          <th
-            class="py-2 px-4 border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-            Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="user in users" :key="user.id">
-          <td class="px-4 py-2 border-b border-gray-200">
-            <NuxtLink :to="`/users/${user.id}`" class="text-blue-600 hover:text-blue-800">{{ user.name }}</NuxtLink>
-          </td>
-          <td class="px-4 py-2 border-b border-gray-200">{{ user.email }}</td>
-          <td class="px-4 py-2 border-b border-gray-200">{{ user.department }}</td>
-          <td class="px-4 py-2 border-b border-gray-200">
-            <span v-for="(item, index) in user.checkedOutItems" :key="item.id">
-              <NuxtLink :to="`/items/${item.id}`">{{ item.name }}</NuxtLink>
-              <span v-if="index < user.checkedOutItems.length - 1">, </span>
-            </span>
-          </td>
-          <td class="px-4 py-2 border-b border-gray-200">
-            <button class="text-blue-600 hover:text-blue-800" @click="editUser(user)">Edit</button>
-            <button class="text-red-600 hover:text-red-800 ml-2" @click="confirmDeleteUser(user.id)">Delete</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <UTable :rows="users" :columns="columns">
+
+      <!-- Custom Name Slot -->
+      <template #name-data="{ row }">
+        <NuxtLink :to="`/users/${row.id}`" class="text-blue-600 hover:text-blue-800">{{ row.name }}</NuxtLink>
+      </template>
+      <!-- Checked Out Items -->
+      <template #checkedOutItems-data="{ row }">
+        <div>
+          <span v-for="(item, index) in row.checkedOutItems" :key="item.id">
+            <NuxtLink :to="`/items/${item.id}`" class="text-blue-600 hover:text-blue-800">{{ item.name }}</NuxtLink>
+            <span v-if="index < row.checkedOutItems.length - 1">, </span>
+          </span>
+        </div>
+      </template>
+      <!-- Action Buttons -->
+      <template #actions-data="{ row }">
+        <UButton color="blue" @click="editUser(row)">Edit</UButton>
+        <UButton color="red" class="ml-2" @click="confirmDeleteUser(row.id)">Delete</UButton>
+      </template>
+    </UTable>
+
 
     <!-- Add/Edit User Modal -->
-    <div v-if="showModal" class="modal">
-      <div class="modal-content">
-        <h2 class="text-xl font-bold mb-4">{{ editingUser ? 'Edit User' : 'Add New User' }}</h2>
-        <label>Name: <input v-model="modalData.name" type="text"></label>
-        <label>Email: <input v-model="modalData.email" type="email"></label>
-        <label>Department: <input v-model="modalData.department" type="text"></label>
-        <button @click="handleModalSubmit">{{ editingUser ? 'Update' : 'Add' }}</button>
-        <button @click="closeModal">Cancel</button>
-      </div>
-    </div>
+    <UModal v-model="showModal">
+      <UCard :ui="{ ring: '', divide: 'divide-y divide-gray-100 dark:divide-gray-800' }">
+        <h2 class="text-lg font-semibold mb-4">{{ editingUser ? 'Edit User' : 'Add New User' }}</h2>
+
+        <div class="mb-3">
+          <input v-model="modalData.name" type="text" placeholder="Name"
+            class="w-full px-2 py-1 border border-gray-700 focus:border-gray-900 rounded focus:outline-none bg-gray-100 dark:bg-gray-800">
+        </div>
+
+        <div class="mb-3">
+          <input v-model="modalData.email" type="email" placeholder="Email"
+            class="w-full px-2 py-1 border border-gray-700 focus:border-gray-900 rounded focus:outline-none bg-gray-100 dark:bg-gray-800">
+        </div>
+
+        <div class="mb-4">
+          <input v-model="modalData.department" type="text" placeholder="Department"
+            class="w-full px-2 py-1 border border-gray-700 focus:border-gray-900 rounded focus:outline-none bg-gray-100 dark:bg-gray-800">
+        </div>
+
+        <div class="flex justify-end space-x-2">
+          <UButton @click="closeModal" variant="outline">Cancel</UButton>
+          <UButton color="blue" @click="handleModalSubmit">
+            {{ editingUser ? 'Update' : 'Add' }}
+          </UButton>
+        </div>
+      </UCard>
+    </UModal>
+
   </div>
 
   <!-- Confirmation Dialog -->
-  <div v-if="showConfirmationDialog" class="confirmation-dialog">
-    <div class="confirmation-content">
-      <h2>Confirm Deletion</h2>
+  <UModal v-model="showConfirmationDialog">
+    <UCard :ui="{ ring: '', divide: 'divide-y divide-gray-100 dark:divide-gray-800' }">
+      <h2 class="text-lg font-semibold mb-4">Confirm Deletion</h2>
       <p>Are you sure you want to delete this user?</p>
-      <button @click="confirmDeletion">Yes, Delete</button>
-      <button @click="cancelDeletion">Cancel</button>
-    </div>
-  </div>
+      <div class="flex justify-end space-x-2">
+        <UButton variant="outline" @click="cancelDeletion">Cancel</UButton>
+        <UButton color="red" @click="confirmDeletion">Yes, Delete</UButton>
+      </div>
+    </UCard>
+  </UModal>
 </template>
 
 <script setup lang="ts">
@@ -99,14 +100,31 @@ interface User {
   checkedOutItems: CheckedOutItem[];
 }
 
+interface UserColumn {
+  key: string;
+  label: string;
+  sortable?: boolean;
+  cell?: (row: User) => string;
+}
 
-const { data: users, pending, refresh, error } = await useFetch<User[]>('/api/users');
+
+const { data: usersData, pending, refresh, error } = await useFetch<User[]>('/api/users');
+const users = computed(() => usersData.value || []);
 
 const showModal = ref(false);
 const editingUser = ref<User | null>(null);
 const modalData = ref({ name: '', email: '', department: '' });
 const showConfirmationDialog = ref(false);
 const userToDelete = ref<string | null>(null);
+
+const columns: UserColumn[] = [
+  { key: 'name', label: 'Name', sortable: true },
+  { key: 'email', label: 'Email', sortable: true },
+  { key: 'department', label: 'Department', sortable: true },
+  { key: 'checkedOutItems', label: 'Checked Out Items' },
+  { key: 'actions', label: 'Actions' }
+];
+
 
 const confirmDeleteUser = (userId: string) => {
   showConfirmationDialog.value = true;
@@ -123,7 +141,6 @@ const confirmDeletion = async () => {
 const cancelDeletion = () => {
   showConfirmationDialog.value = false;
 };
-
 
 const showAddUserModal = () => {
   editingUser.value = null;
